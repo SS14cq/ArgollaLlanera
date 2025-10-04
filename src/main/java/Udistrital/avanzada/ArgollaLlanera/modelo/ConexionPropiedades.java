@@ -106,4 +106,45 @@ public class ConexionPropiedades {
 		return (Properties) props.clone();
 	}
 
+/**
+ * Carga una lista de equipos desde un archivo de propiedades (.properties).
+ *
+ * <p>Este método lee un archivo de configuración que guarda la información 
+ * de varios equipos y sus jugadores. Usa la clase {@link ConexionPropiedades} 
+ * para acceder a los datos y crear objetos {@link Equipo} y {@link Jugador} 
+ * según la cantidad que haya registrada en el archivo.</p>
+ * @param rutaArchivo ruta al archivo .properties desde el cual se cargarán los datos.
+ * @return una lista de objetos {@link Equipo} completamente inicializados.
+ * @throws IOException si ocurre un error al leer el archivo de propiedades.
+ */
+public static List<Equipo> cargarEquiposDesdeProperties(String rutaArchivo) throws IOException {
+    ConexionPropiedades conexion = loadFromFile(rutaArchivo);
+    Properties props = conexion.asProperties();
+
+    List<Equipo> equipos = new ArrayList<>();
+    int count = Integer.parseInt(props.getProperty("numeroEquipos.count", "0"));
+
+    for (int i = 1; i <= count; i++) {
+        String clave = props.getProperty("equipo." + i + ".clave");
+        String nombre = props.getProperty("equipo." + i + ".name");
+        int numJugadores = Integer.parseInt(props.getProperty("equipo." + i + ".numeroJugadores", "0"));
+
+        Equipo equipo = new Equipo(clave, nombre);
+
+        for (int j = 1; j <= numJugadores; j++) {
+            String jnombre = props.getProperty("equipo." + i + ".player." + j + ".name");
+            if (jnombre == null) continue;
+            String japodo = props.getProperty("equipo." + i + ".player." + j + ".nick", "");
+            String jfoto = props.getProperty("equipo." + i + ".player." + j + ".photo", "");
+            Jugador jugador = new Jugador(jnombre, japodo, jfoto);
+            equipo.agregarJugador(jugador);
+        }
+
+        equipos.add(equipo);
+    }
+
+    return equipos;
+}
+
+
 }
