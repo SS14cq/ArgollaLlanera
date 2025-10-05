@@ -1,0 +1,7 @@
+﻿# Archivos temporales de VS y sistema
+.vs/
+*.vsidx
+*.vscode/
+bin/
+obj/
+target/
