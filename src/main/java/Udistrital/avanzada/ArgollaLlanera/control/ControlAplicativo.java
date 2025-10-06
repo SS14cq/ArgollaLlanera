@@ -4,21 +4,19 @@ import Udistrital.avanzada.ArgollaLlanera.vista.VistaJuego;
 
 import javax.swing.*;
 import java.io.File;
+import java.io.IOException;
 
 /**
  * ControlAplicativo inicia la interfaz y controla la carga de archivos.
  */
 public class ControlAplicativo {
 
-    public ControlAplicativo() {
-        SwingUtilities.invokeLater(this::iniciarAplicacion);
-    }
-
-    private void iniciarAplicacion() {
+    public ControlAplicativo() throws IOException {
         VistaJuego vista = new VistaJuego();
         ControlVista controlVista = new ControlVista(vista);
         ControlJuego controlJuego = new ControlJuego(controlVista);
         controlVista.setControlJuego(controlJuego);
+        
 
         JFileChooser fileChooser = new JFileChooser();
         fileChooser.setDialogTitle("Selecciona el archivo Equipos.properties");
@@ -32,9 +30,5 @@ public class ControlAplicativo {
             JOptionPane.showMessageDialog(null, "No se seleccionó ningún archivo. El juego no puede iniciar.");
             System.exit(0);
         }
-    }
-
-    public static void main(String[] args) {
-        new ControlAplicativo();
     }
 }

@@ -31,7 +31,7 @@ public class Jugador implements Serializable {
      * Constructor que recibe los atributos para crear un objeto Jugador.
      * @param nombre Nombre del jugador.
      * @param apodo Apodo del jugador.
-     * @param foto Ruta o nombre de la imagen del jugador.
+     * @param foto Direccion de enlace de la foto del jugador
      */
     public Jugador(String nombre, String apodo, String foto) {
         this.nombre = nombre;

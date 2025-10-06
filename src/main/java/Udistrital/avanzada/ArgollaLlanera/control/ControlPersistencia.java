@@ -1,5 +1,7 @@
 package Udistrital.avanzada.ArgollaLlanera.control;
 
+import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.charset.StandardCharsets;
@@ -23,7 +25,7 @@ import java.nio.charset.StandardCharsets;
 public class ControlPersistencia {
 
     private RandomAccessFile file;
-    private String filePath;
+    private File filePath;
 
     /**
      * Tamaño fijo en bytes para cada registro.
@@ -36,7 +38,12 @@ public class ControlPersistencia {
      * Crea una instancia para archivo por defecto (ruta fija).
      */
     public ControlPersistencia() {
-        this.filePath = "Specs/data/resultados.dat";
+        try {
+			filePath = new File("src\\Specs\\Data\\resultados.dat");
+			file = new RandomAccessFile(filePath, "rw");
+		} catch (FileNotFoundException fnfe) {/* Archivo no encontrado */
+                    
+                }
     }
 
     /**
@@ -45,7 +52,7 @@ public class ControlPersistencia {
      * @param filePath ruta al archivo de acceso aleatorio
      * @throws IOException si el archivo no puede abrirse
      */
-    public ControlPersistencia(String filePath) throws IOException {
+    public ControlPersistencia(File filePath) throws IOException {
         this.filePath = filePath;
         file = new RandomAccessFile(filePath, "rw");
     }
@@ -59,8 +66,8 @@ public class ControlPersistencia {
      * @param resultado resultado final ("Ganó" o "Perdió")
      */
     public void escribirRegistro(String clave, String nombreEquipo, String[] jugadores, String resultado) {
-        try (RandomAccessFile file = new RandomAccessFile(filePath, "rw")) {
-            file.seek(file.length());  // Mover el puntero al final para appending
+        try (RandomAccessFile Rfile = new RandomAccessFile(filePath, "rw")) {
+            Rfile.seek(Rfile.length());  // Mover el puntero al final para appending
             StringBuilder registro = new StringBuilder();
             registro.append(padRight(clave, 20));
             registro.append(padRight(nombreEquipo, 30));
@@ -87,7 +94,6 @@ public class ControlPersistencia {
 
             file.write(data);
         } catch (IOException e) {
-            e.printStackTrace();
         }
     }
 
@@ -96,13 +102,13 @@ public class ControlPersistencia {
      * mostrando el contenido estructurado en forma legible.
      */
     public void leerRegistros() {
-        try (RandomAccessFile file = new RandomAccessFile(filePath, "r")) {
-            long totalRegistros = file.length() / RECORD_SIZE;
+        try (RandomAccessFile Rfile = new RandomAccessFile(filePath, "r")) {
+            long totalRegistros = Rfile.length() / RECORD_SIZE;
             System.out.println("Registros guardados en archivo:");
             for (int i = 0; i < totalRegistros; i++) {
-                file.seek(i * RECORD_SIZE);
+                Rfile.seek(i * RECORD_SIZE);
                 byte[] datos = new byte[RECORD_SIZE];
-                file.readFully(datos);
+                Rfile.readFully(datos);
                 String registro = new String(datos, StandardCharsets.UTF_8);
                 System.out.println(registro.trim());
             }

@@ -324,7 +324,7 @@ public class ControlJuego {
             int option = fileChooser.showOpenDialog(null);
             if (option == JFileChooser.APPROVE_OPTION) {
                 File archivo = fileChooser.getSelectedFile();
-                ControlPersistencia persist = new ControlPersistencia(archivo.getAbsolutePath());
+                ControlPersistencia persist = new ControlPersistencia(archivo);
                 persist.leerRegistros();
                 persist.close();
             }
