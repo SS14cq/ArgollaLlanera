@@ -3,104 +3,153 @@ package Udistrital.avanzada.ArgollaLlanera.control;
 import Udistrital.avanzada.ArgollaLlanera.modelo.Equipo;
 import Udistrital.avanzada.ArgollaLlanera.modelo.Juego;
 import Udistrital.avanzada.ArgollaLlanera.modelo.Jugador;
-
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
 import javax.swing.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 
 /**
- * Controlador principal del juego Argolla Llanera.
- * Gestiona la lógica principal de turnos, rondas, persistencia de resultados,
- * la muerte súbita en caso de empate, y comunicación con la vista (GUI).
+ * ControlJuego
  *
- * <p>Permite jugar un máximo de dos rondas, registra resultados en archivo
- * de acceso aleatorio, y al salir muestra en consola toda la información guardada.</p>
+ * Controlador central que gestiona la lógica de partidas, turnos y reglas del juego Argolla Llanera.
+ * Orquesta los flujos de la competencia entre equipos, maneja el avance de rondas, lanzamientos
+ * de jugadores, cálculo y registro de puntajes, así como manejo de persistencia de resultados.
+ * Cumple con la separación MVC, concentrando la lógica sin alterar la vista ni el modelo.
+ *
+ * Flujos principales:
+ * - Carga de equipos para la competencia.
+ * - Control de turnos y turnos extra.
+ * - Aplicación de reglas para los 21 puntos y muerte súbita.
+ * - Manejo de puntajes y decisión de ganador.
+ * - Persistencia de resultados en archivo.
  *
  * @author juanr
- * @author sofia (modificado 05-10-2025)
- * @version 1.2
+ * @author Sofia modificado 05-10-2025
+ * @author Sofia modificado 06-10-2025
+ * @version 1.3
  */
 public class ControlJuego {
 
-    private ControlVista controlVista;
-    private Juego juego;
-    private ControlPersistencia persistencia;
-    private ControlEquipo controlEquipo;
-    private List<Equipo> equipos;
-    private int rondasJugadas;
-    private int equipoTurnoIndex;
-    private int jugadorActualIndex;
-    private Equipo equipoActual;
-    private Map<Equipo, Boolean> manosCompletadas;
+    private ControlVista controlVista;           // Referencia al controlador de la vista
+    private Juego juego;                         // Instancia que representa la partida actual
+    private ControlPersistencia persistencia;    // Persistencia de resultados
+    private ControlEquipo controlEquipo;         // Auxiliar para gestión y carga de equipos
+
+    private List<Equipo> equiposCargados;        // Todos los equipos disponibles en el archivo
+    private List<Equipo> equiposJuego;           // Equipos seleccionados para la partida
+
+    private int rondasJugadas;                   // Contador de rondas completadas
+    private int jugadorActualIndex;              // Índice del jugador en turno dentro del equipo actual
+    private Equipo equipoActual;                 // Equipo actualmente en turno
+
+    private Map<Equipo, Boolean> manosCompletadas;       // Marcas de equipos que completaron sus manos
+
+    private boolean turnoExtraActivado;                  // Marcas para manejo de rondas extra
+    private int lanzamientosExtraRestantes;
+    private Equipo equipoPrimerAlcance21;                // Equipo que primero alcanzó 21 puntos
+
+    private static final int LIMITE_RONDAS = 2;          // Número máximo de rondas
 
     /**
-     * Constructor. Inicializa el controlador, estructuras y eventos.
-     * @param controlVista El controlador de la vista asociada
+     * Constructor principal. Inicializa estructuras internas y conecta con la vista.
+     *
+     * @param controlVista referencia al controlador de la vista asociada
+     * @throws IOException en caso de error de inicialización de persistencia
      */
-    public ControlJuego(ControlVista controlVista) {
+    public ControlJuego(ControlVista controlVista) throws IOException {
         this.controlVista = controlVista;
         this.persistencia = new ControlPersistencia();
         this.controlEquipo = new ControlEquipo();
-        this.equipos = new ArrayList<>();
-        this.rondasJugadas = 0;
+
+        this.equiposCargados = new ArrayList<>();
+        this.equiposJuego = new ArrayList<>();
         this.manosCompletadas = new HashMap<>();
-        configurarEventos();
+        this.rondasJugadas = 0;
+
+        this.jugadorActualIndex = 0;
+        this.turnoExtraActivado = false;
+        this.lanzamientosExtraRestantes = 0;
+        this.equipoPrimerAlcance21 = null;
     }
 
     /**
-     * Configura los listeners de los botones principales.
-     */
-    private void configurarEventos() {
-        controlVista.getBtnLanzar().addActionListener(e -> lanzarTurno());
-        controlVista.getBtnSalir().addActionListener(e -> salir());
-    }
-
-    /**
-     * Carga equipos desde archivo .properties.
-     * Inicializa el juego, valida cantidades y actualiza la interfaz.
-     * @param archivoPropiedades Archivo de props con los equipos/jugadores
+     * Carga los equipos desde el archivo de propiedades.
+     * Verifica que hay al menos dos equipos válidos, inicializa los que jugarán e inicia la partida.
+     *
+     * @param archivoPropiedades archivo .properties seleccionado por el usuario
      */
     public void cargarEquipos(File archivoPropiedades) {
         try {
             controlEquipo.cargarEquiposDesdeArchivo(archivoPropiedades.getAbsolutePath());
-            equipos = new ArrayList<>(controlEquipo.listarEquipos());
-            if (equipos.size() < 2) {
+            equiposCargados = new ArrayList<>(controlEquipo.listarEquipos());
+
+            if (equiposCargados.size() < 2) {
                 controlVista.mostrarMensaje("Debe cargar al menos dos equipos.");
                 return;
             }
-            juego = new Juego(equipos);
-            equipoTurnoIndex = new Random().nextInt(equipos.size());
-            jugadorActualIndex = 0;
-            equipoActual = equipos.get(equipoTurnoIndex);
-            manosCompletadas.put(equipos.get(0), false);
-            manosCompletadas.put(equipos.get(1), false);
-            controlVista.mostrarEquipos(equipos);
-            controlVista.setTurno(equipoActual.getNombre());
-            controlVista.actualizarPuntajes(0, 0);
-            controlVista.resaltarEquipo(equipoActual);
-            if (!equipoActual.getJugadores().isEmpty()) {
-                controlVista.resaltarJugador(equipoActual.getJugadores().get(0));
-            }
+
+            equiposJuego = Arrays.asList(equiposCargados.get(0), equiposCargados.get(1));
+            juego = new Juego(equiposJuego);
+
+            iniciarPrimeraMano();
+
         } catch (IOException e) {
             controlVista.mostrarMensaje("Error al cargar equipos: " + e.getMessage());
         }
     }
 
     /**
-     * Ejecuta la lógica principal de un turno de juego.
-     * Actualiza puntajes, detalles, resalta jugador y controla avance de ronda.
+     * Inicializa el estado y vista de la primera mano de la ronda.
+     * Selecciona de forma aleatoria el equipo que inicia.
+     */
+    private void iniciarPrimeraMano() {
+        jugadorActualIndex = 0;
+        Random rand = new Random();
+        int indiceInicial = rand.nextInt(equiposJuego.size());
+        equipoActual = equiposJuego.get(indiceInicial);
+
+        manosCompletadas.clear();
+        for (Equipo eq : equiposJuego) {
+            manosCompletadas.put(eq, false);
+        }
+        controlVista.mostrarEquipos(equiposJuego);
+        controlVista.setTurno(equipoActual.getNombre());
+        controlVista.resaltarEquipo(equipoActual);
+
+        if (!equipoActual.getJugadores().isEmpty()) {
+            controlVista.resaltarJugador(equipoActual.getJugadores().get(jugadorActualIndex));
+        }
+
+        controlVista.actualizarPuntajes(
+                juego.getPuntajes().getOrDefault(equiposJuego.get(0), 0),
+                juego.getPuntajes().getOrDefault(equiposJuego.get(1), 0)
+        );
+        controlVista.actualizarDetalle("");
+        controlVista.mostrarMensajeEnVista("");
+        controlVista.habilitarBotonLanzar(true);
+    }
+
+    /**
+     * Ejecuta el turno de lanzamiento para el jugador actual del equipo en turno.
+     * Aplica las reglas del juego, actualiza la vista y controla el avance de rondas.
      */
     public void lanzarTurno() {
-        if (rondasJugadas >= 2) {
-            controlVista.mostrarMensaje("Ya se jugaron las dos rondas permitidas.");
+        if (rondasJugadas >= LIMITE_RONDAS) {
+            controlVista.mostrarMensaje("Ya se jugaron las " + LIMITE_RONDAS + " rondas permitidas.");
+            controlVista.habilitarBotonLanzar(false);
+            return;
+        }
+
+        if (equipoActual == null || equipoActual.getJugadores().isEmpty()) {
+            controlVista.mostrarMensaje("Error: equipo o lista de jugadores no inicializada.");
             return;
         }
 
         Jugador jugadorActual = equipoActual.getJugadores().get(jugadorActualIndex);
+
         String resultado = juego.generarResultadoAleatorio();
+        JOptionPane.showMessageDialog(null, "El jugador " + jugadorActual.getNombre() + " lanzó: " + resultado);
+
         int puntos = juego.calcularPuntos(resultado);
         jugadorActual.setResultado(resultado);
         jugadorActual.setPuntos(puntos);
@@ -108,156 +157,190 @@ public class ControlJuego {
         int puntosPrevios = juego.getPuntajes().getOrDefault(equipoActual, 0);
         juego.getPuntajes().put(equipoActual, puntosPrevios + puntos);
 
-        String mensajeTurno = "Equipo: " + equipoActual.getNombre()
-            + " | Jugador: " + jugadorActual.getNombre()
-            + " (" + jugadorActual.getApodo() + ")"
-            + " | Resultado: " + resultado
-            + " | Puntos obtenidos: " + puntos;
-        controlVista.mostrarMensajeEnVista(mensajeTurno);
+        controlVista.mostrarMensajeEnVista("Equipo: " + equipoActual.getNombre()
+                + " | Jugador: " + jugadorActual.getNombre() + " (" + jugadorActual.getApodo() + ")"
+                + " | Resultado: " + resultado + " | Puntos obtenidos: " + puntos);
 
-        String detalle = "Jugador: " + jugadorActual.getNombre() + "\n"
-            + "Jugada: " + resultado + "\n"
-            + "Puntos obtenidos: " + puntos;
-        controlVista.actualizarDetalle(detalle);
+        controlVista.actualizarDetalle("Jugador: " + jugadorActual.getNombre() + "\n"
+                + "Jugada: " + resultado + "\n"
+                + "Puntos obtenidos: " + puntos);
         controlVista.actualizarVista(juego.getPuntajes());
         controlVista.actualizarPuntajes(
-            juego.getPuntajes().get(equipos.get(0)),
-            juego.getPuntajes().get(equipos.get(1))
+                juego.getPuntajes().getOrDefault(equiposJuego.get(0), 0),
+                juego.getPuntajes().getOrDefault(equiposJuego.get(1), 0)
         );
-        controlVista.resaltarEquipo(equipoActual);
-        controlVista.resaltarJugador(jugadorActual);
 
+        controlVista.resaltarEquipo(equipoActual);
         jugadorActualIndex++;
 
-        if (jugadorActualIndex >= equipoActual.getJugadores().size()) {
-            manosCompletadas.put(equipoActual, true);
+        int puntosActuales = juego.getPuntajes().getOrDefault(equipoActual, 0);
 
-            if (manosCompletadas.values().stream().allMatch(v -> v)) {
-                // Guarda resultados de la ronda para cada equipo
-                for (Equipo eq : equipos) {
-                    String res = (juego.getPuntajes().getOrDefault(eq, 0) >= 21) ? "Gano" : "Perdio";
-                    guardarResultado(eq, res);
-                }
-
-                manosCompletadas.put(equipos.get(0), false);
-                manosCompletadas.put(equipos.get(1), false);
-
-                Equipo equipoA = equipos.get(0);
-                Equipo equipoB = equipos.get(1);
-                int puntosA = juego.getPuntajes().get(equipoA);
-                int puntosB = juego.getPuntajes().get(equipoB);
-                boolean ambosSuperan21 = puntosA > 21 && puntosB > 21;
-                boolean ambosIguales21 = puntosA == 21 && puntosB == 21;
-                if (ambosSuperan21 || ambosIguales21) {
-                    controlVista.mostrarMensajeEnVista("\n ¡Se jugará muerte súbita por empate o ambos superan 21 puntos!");
-                    jugarMuerteSubita();
-                } else if (puntosA >= 21 && puntosB < 21) {
-                    finalizarJuegoConGanador(equipoA);
-                } else if (puntosB >= 21 && puntosA < 21) {
-                    finalizarJuegoConGanador(equipoB);
-                }
-            } else {
+        // Gestión de regla de los 21 puntos
+        if (puntosActuales >= 21) {
+            if (equipoPrimerAlcance21 == null) {
+                equipoPrimerAlcance21 = equipoActual;
+                controlVista.mostrarMensaje("El equipo " + equipoActual.getNombre()
+                        + " alcanzó 21 puntos. El otro equipo debe completar su turno para igualar.");
                 cambiarTurno();
-            }
-            jugadorActualIndex = 0;
-        } else {
-            Jugador siguienteJugador = equipoActual.getJugadores().get(jugadorActualIndex);
-            controlVista.resaltarJugador(siguienteJugador);
-        }
-    }
-
-    /**
-     * Ejecuta la muerte súbita con lanzamientos de parejas, usando javax.swing.Timer
-     * para mostrar cada lanzamiento con pausa visual.
-     */
-    private void jugarMuerteSubita() {
-        Equipo equipoA = equipos.get(0);
-        Equipo equipoB = equipos.get(1);
-
-        final int[] victoriasA = {0};
-        final int[] victoriasB = {0};
-        final int[] index = {0};
-        final int total = equipoA.getJugadores().size();
-
-        controlVista.mostrarMensajeEnVista("Inicia Muerte Súbita...\n");
-
-        // Referencia completa para timer de Swing
-        javax.swing.Timer timer = new javax.swing.Timer(1500, null);
-        timer.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                if (index[0] >= total) {
-                    timer.stop();
-
-                    Equipo ganador;
-                    if (victoriasA[0] > victoriasB[0]) {
-                        ganador = equipoA;
-                    } else if (victoriasB[0] > victoriasA[0]) {
-                        ganador = equipoB;
-                    } else {
-                        controlVista.mostrarMensajeEnVista("Empate total en muerte súbita, se repite la ronda.\n");
-                        jugarMuerteSubita();
-                        return;
-                    }
-                    finalizarJuegoConGanador(ganador);
+                return;
+            } else {
+                if (equipoActual.equals(equipoPrimerAlcance21)) {
+                    cambiarTurno(); // Esperar que el otro termine
+                    return;
+                } else {
+                    evaluarGanador();
                     return;
                 }
-
-                Jugador jugadorA = equipoA.getJugadores().get(index[0]);
-                Jugador jugadorB = equipoB.getJugadores().get(index[0]);
-                String resultadoA = juego.generarResultadoAleatorio();
-                int puntosA = juego.calcularPuntos(resultadoA);
-                String resultadoB = juego.generarResultadoAleatorio();
-                int puntosB = juego.calcularPuntos(resultadoB);
-
-                String msg = "Pareja " + (index[0]+1) + ":\n" +
-                             jugadorA.getNombre() + " lanza: " + resultadoA + " (" + puntosA + " pts)\n" +
-                             jugadorB.getNombre() + " lanza: " + resultadoB + " (" + puntosB + " pts)\n";
-                controlVista.mostrarMensajeEnVista(msg);
-
-                if (puntosA > puntosB) {
-                    victoriasA[0]++;
-                    controlVista.mostrarMensajeEnVista("Ganador de la pareja: " + jugadorA.getNombre() + " (" + equipoA.getNombre() + ")\n");
-                } else if (puntosB > puntosA) {
-                    victoriasB[0]++;
-                    controlVista.mostrarMensajeEnVista("Ganador de la pareja: " + jugadorB.getNombre() + " (" + equipoB.getNombre() + ")\n");
-                } else {
-                    controlVista.mostrarMensajeEnVista("Empate en esta pareja.\n");
-                }
-                index[0]++;
             }
-        });
-        timer.setInitialDelay(0);
-        timer.start();
-    }
+        }
 
-    /**
-     * Pasa el turno al siguiente equipo y resetea al primer jugador.
-     */
-    private void cambiarTurno() {
-        equipoTurnoIndex = (equipoTurnoIndex + 1) % equipos.size();
-        equipoActual = equipos.get(equipoTurnoIndex);
-        controlVista.setTurno(equipoActual.getNombre());
-        controlVista.resaltarEquipo(equipoActual);
-        jugadorActualIndex = 0;
-        if (!equipoActual.getJugadores().isEmpty()) {
-            controlVista.resaltarJugador(equipoActual.getJugadores().get(0));
+        // Gestionar avance de turno y cambio de jugador/equipo
+        if (jugadorActualIndex >= equipoActual.getJugadores().size()) {
+            cambiarTurno();
+            return;
+        }
+
+        if (jugadorActualIndex < equipoActual.getJugadores().size()) {
+            controlVista.resaltarJugador(equipoActual.getJugadores().get(jugadorActualIndex));
+            controlVista.habilitarBotonLanzar(true);
         }
     }
 
     /**
-     * Muestra ventana de ganador y pregunta jugar otra ronda o salir.
-     * Guarda resultados de la ronda antes de terminar.
-     * @param ganador equipo ganador de la partida/ronda.
+     * Cambia el turno al siguiente equipo y reinicia índice de jugador.
+     * Actualiza visualmente el equipo y jugador en turno.
+     */
+    private void cambiarTurno() {
+        int indexActual = equiposJuego.indexOf(equipoActual);
+        int indexSiguiente = (indexActual + 1) % equiposJuego.size();
+        equipoActual = equiposJuego.get(indexSiguiente);
+        jugadorActualIndex = 0;
+
+        controlVista.setTurno(equipoActual.getNombre());
+        controlVista.resaltarEquipo(equipoActual);
+        if (!equipoActual.getJugadores().isEmpty()) {
+            controlVista.resaltarJugador(equipoActual.getJugadores().get(jugadorActualIndex));
+        }
+
+        controlVista.habilitarBotonLanzar(true);
+    }
+
+    /**
+     * Evalúa, al cerrar ronda, qué equipo ganó, empató o si se necesita muerte súbita.
+     * Persiste los resultados y controla la transición final.
+     */
+    private void evaluarGanador() {
+        int puntosA = juego.getPuntajes().getOrDefault(equiposJuego.get(0), 0);
+        int puntosB = juego.getPuntajes().getOrDefault(equiposJuego.get(1), 0);
+
+        // Guardar resultados en archivo
+        for (Equipo eq : equiposJuego) {
+            String res = (juego.getPuntajes().getOrDefault(eq, 0) >= 21) ? "Ganó" : "Perdió";
+            guardarResultado(eq, res);
+        }
+
+        // Decisión de ganador, empate o avance de ronda extra
+        if (puntosA >= 21 && puntosB < 21) {
+            controlVista.mostrarGanador(equiposJuego.get(0));
+            finalizarJuegoConGanador(equiposJuego.get(0));
+            return;
+        } else if (puntosB >= 21 && puntosA < 21) {
+            controlVista.mostrarGanador(equiposJuego.get(1));
+            finalizarJuegoConGanador(equiposJuego.get(1));
+            return;
+        }
+
+        // Empate y muerte súbita
+        if (puntosA >= 21 && puntosB >= 21) {
+            controlVista.mostrarMensaje("¡Empate! Ambos equipos alcanzaron 21 o más puntos.\nSe jugará muerte súbita.");
+            jugarMuerteSubita();
+            return;
+        }
+
+        // Ningún equipo llegó a 21
+        controlVista.mostrarMensajeEnVista("Ningún equipo alcanzó 21. Ronda finalizada sin ganador.");
+        rondasJugadas++;
+        if (rondasJugadas < LIMITE_RONDAS) {
+            reiniciarParaNuevaRonda();
+        } else {
+            salir();
+        }
+    }
+
+    /**
+     * Ejecuta el ciclo de muerte súbita entre ambas parejas de jugadores.
+     * Decide ganador por victorias individuales en cada pareja.
+     */
+    private void jugarMuerteSubita() {
+        Equipo equipoA = equiposJuego.get(0);
+        Equipo equipoB = equiposJuego.get(1);
+
+        int victoriasA = 0;
+        int victoriasB = 0;
+        int totalJugadores = Math.min(equipoA.getJugadores().size(), equipoB.getJugadores().size());
+        StringBuilder logMuerteSubita = new StringBuilder("🏹 Inicia Muerte Súbita 🏹\n\n");
+
+        for (int i = 0; i < totalJugadores; i++) {
+            Jugador jugadorA = equipoA.getJugadores().get(i);
+            Jugador jugadorB = equipoB.getJugadores().get(i);
+
+            String resultadoA = juego.generarResultadoAleatorio();
+            int puntosA = juego.calcularPuntos(resultadoA);
+
+            String resultadoB = juego.generarResultadoAleatorio();
+            int puntosB = juego.calcularPuntos(resultadoB);
+
+            logMuerteSubita.append("Pareja ").append(i + 1).append(":\n")
+                    .append(jugadorA.getNombre()).append(" lanza: ").append(resultadoA)
+                    .append(" (").append(puntosA).append(" pts)\n")
+                    .append(jugadorB.getNombre()).append(" lanza: ").append(resultadoB)
+                    .append(" (").append(puntosB).append(" pts)\n");
+
+            if (puntosA > puntosB) {
+                victoriasA++;
+                logMuerteSubita.append("Ganador de la pareja: ")
+                        .append(jugadorA.getNombre()).append(" (")
+                        .append(equipoA.getNombre()).append(")\n\n");
+            } else if (puntosB > puntosA) {
+                victoriasB++;
+                logMuerteSubita.append("Ganador de la pareja: ")
+                        .append(jugadorB.getNombre()).append(" (")
+                        .append(equipoB.getNombre()).append(")\n\n");
+            } else {
+                logMuerteSubita.append("Empate en esta pareja.\n\n");
+            }
+        }
+
+        if (victoriasA > victoriasB) {
+            logMuerteSubita.append("🏆 ¡Gana el equipo ").append(equipoA.getNombre()).append(" en muerte súbita!\n");
+            controlVista.mostrarMensajeEnVista(logMuerteSubita.toString());
+            finalizarJuegoConGanador(equipoA);
+        } else if (victoriasB > victoriasA) {
+            logMuerteSubita.append("🏆 ¡Gana el equipo ").append(equipoB.getNombre()).append(" en muerte súbita!\n");
+            controlVista.mostrarMensajeEnVista(logMuerteSubita.toString());
+            finalizarJuegoConGanador(equipoB);
+        } else {
+            logMuerteSubita.append("🔁 ¡Empate total en muerte súbita, se repite la ronda!\n");
+            controlVista.mostrarMensajeEnVista(logMuerteSubita.toString());
+            jugarMuerteSubita();
+        }
+    }
+
+    /**
+     * Finaliza la partida mostrando el ganador y solicitando al usuario si desea seguir jugando o salir.
+     *
+     * @param ganador equipo que ganó la ronda
      */
     private void finalizarJuegoConGanador(Equipo ganador) {
         rondasJugadas++;
 
         StringBuilder mensaje = new StringBuilder();
-        mensaje.append("¡Gano el equipo ").append(ganador.getNombre()).append("!\nJugadores:\n");
-        for (Jugador j : ganador.getJugadores()) {
-            mensaje.append("- ").append(j.getNombre()).append(" (").append(j.getApodo()).append(")\n");
+        mensaje.append("¡Ganó el equipo ").append(ganador.getNombre()).append("!\nJugadores:\n");
+        for (Jugador jugador : ganador.getJugadores()) {
+            mensaje.append("- ").append(jugador.getNombre()).append(" (").append(jugador.getApodo()).append(")\n");
         }
+
+        controlVista.mostrarGanador(ganador);
 
         int opcion = JOptionPane.showOptionDialog(null,
                 mensaje.toString(),
@@ -269,62 +352,68 @@ public class ControlJuego {
                 "Jugar otra ronda");
 
         if (opcion == JOptionPane.YES_OPTION) {
-            if (rondasJugadas >= 2) {
-                controlVista.mostrarMensaje("Solo se permiten 2 rondas. El juego finaliza.");
+            if (rondasJugadas >= LIMITE_RONDAS) {
+                controlVista.mostrarMensaje("Se alcanzó el límite de " + LIMITE_RONDAS + " rondas. El juego finaliza.");
+                controlVista.habilitarBotonLanzar(false);
                 salir();
             } else {
                 reiniciarParaNuevaRonda();
             }
         } else {
+            controlVista.habilitarBotonLanzar(false);
             salir();
         }
     }
 
     /**
-     * Reinicia el juego para una nueva ronda con estado limpio.
+     * Reinicia el estado interno para comenzar una nueva ronda entre los equipos actuales.
+     * Se conservan los mismos equipos y jugadores.
      */
     private void reiniciarParaNuevaRonda() {
-        juego = new Juego(equipos);
+        juego = new Juego(equiposJuego);
         jugadorActualIndex = 0;
-        equipoTurnoIndex = new Random().nextInt(equipos.size());
-        equipoActual = equipos.get(equipoTurnoIndex);
-        manosCompletadas.put(equipos.get(0), false);
-        manosCompletadas.put(equipos.get(1), false);
-        controlVista.mostrarEquipos(equipos);
-        controlVista.setTurno(equipoActual.getNombre());
-        controlVista.actualizarPuntajes(0, 0);
-        controlVista.actualizarDetalle("");
-        controlVista.resaltarEquipo(equipoActual);
-        if (!equipoActual.getJugadores().isEmpty()) {
-            controlVista.resaltarJugador(equipoActual.getJugadores().get(0));
-        }
+        turnoExtraActivado = false;
+        lanzamientosExtraRestantes = 0;
+        equipoPrimerAlcance21 = null;
+        controlVista.mostrarEquipos(equiposJuego);
+        iniciarPrimeraMano();
     }
 
     /**
-     * Guarda los resultados de cada equipo tras la ronda usando ControlPersistencia.
-     * @param equipo Equipo a guardar
-     * @param resultado "Ganó"/"Perdió"
+     * Guarda el resultado de la ronda para el equipo en el archivo de persistencia.
+     *
+     * @param equipo equipo cuyos datos se registran
+     * @param resultado texto (“Ganó” o “Perdió”)
      */
     private void guardarResultado(Equipo equipo, String resultado) {
-        String[] nombres = equipo.getJugadores().stream()
-                .map(Jugador::getNombre)
-                .toArray(String[]::new);
+        if (persistencia == null) {
+            controlVista.mostrarMensaje("No se puede guardar resultado: persistencia no inicializada.");
+            return;
+        }
+        String[] nombres = new String[4];
+        List<Jugador> jugadores = equipo.getJugadores();
+        for (int i = 0; i < 4; i++) {
+            nombres[i] = i < jugadores.size() ? jugadores.get(i).getNombre() : "";
+        }
         persistencia.escribirRegistro(equipo.getClave(), equipo.getNombre(), nombres, resultado);
     }
 
     /**
-     * Termina la aplicación mostrando en consola los registros guardados,
-     * permitiendo seleccionar el archivo mediante JFileChooser.
+     * Finaliza el juego cerrando recursos de persistencia y mostrando los registros al usuario.
+     * Cierra la aplicación.
      */
     public void salir() {
         try {
+            if (persistencia != null) {
+                persistencia.close();
+            }
             JOptionPane.showMessageDialog(null, "Finalizando juego...");
             JFileChooser fileChooser = new JFileChooser();
             fileChooser.setDialogTitle("Seleccione archivo de registros para mostrar");
             int option = fileChooser.showOpenDialog(null);
             if (option == JFileChooser.APPROVE_OPTION) {
                 File archivo = fileChooser.getSelectedFile();
-                ControlPersistencia persist = new ControlPersistencia(archivo);
+                ControlPersistencia persist = new ControlPersistencia(archivo.getAbsolutePath());
                 persist.leerRegistros();
                 persist.close();
             }

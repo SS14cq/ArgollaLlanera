@@ -1,10 +1,12 @@
-
+/*
+ * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
+ * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
+ */
 package Udistrital.avanzada.ArgollaLlanera.modelo;
 
 /**
  *
  * @author juan-
- * version 1.0
  */
 import java.io.File;
 import java.io.IOException;
@@ -21,6 +23,8 @@ import java.util.Properties;
  * Provee métodos estáticos para crear instancias a partir de una ruta de
  * archivo en disco o desde el classpath, y métodos de consulta convenientes.
  * </p>
+ * @author juanr
+ * @version 1.1
  */
 public class ConexionPropiedades {
 

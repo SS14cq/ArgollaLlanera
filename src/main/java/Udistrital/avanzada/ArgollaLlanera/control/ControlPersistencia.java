@@ -1,7 +1,6 @@
 package Udistrital.avanzada.ArgollaLlanera.control;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.charset.StandardCharsets;
@@ -17,64 +16,57 @@ import java.nio.charset.StandardCharsets;
  * Las cadenas se rellenan con espacios para garantizar longitud constante.</p>
  * 
  * Implementa lectura y escritura bajo codificación UTF-8.
- *  
+ * 
  * @author juanr
- * @author Sofia modificado el 05-10-2025
  * @version 1.0
  */
 public class ControlPersistencia {
 
     private RandomAccessFile file;
-    private File filePath;
+    private String filePath;
 
-    /**
-     * Tamaño fijo en bytes para cada registro.
-     * Calculado como suma de longitudes de campos con relleno para cadenas:
-     * Clave(20) + Nombre equipo(30) + 4x Jugadores(30) + Resultado(20) = 160 bytes
-     */
+    // Tamaño fijo en bytes para cada registro.
     public static final int RECORD_SIZE = 160;
 
     /**
-     * Crea una instancia para archivo por defecto (ruta fija).
+     * Crea una instancia para archivo por defecto (ruta fija) y asegura la existencia de la carpeta.
      */
-    public ControlPersistencia() {
-        try {
-			filePath = new File("src\\Specs\\Data\\resultados.dat");
-			file = new RandomAccessFile(filePath, "rw");
-		} catch (FileNotFoundException fnfe) {/* Archivo no encontrado */
-                    
-                }
+    public ControlPersistencia() throws IOException {
+        this("Specs/data/resultados.dat");
     }
 
     /**
-     * Crea una instancia para archivo con ruta específica.
+     * Crea una instancia para archivo con ruta específica y asegura la existencia de la carpeta.
      * 
      * @param filePath ruta al archivo de acceso aleatorio
      * @throws IOException si el archivo no puede abrirse
      */
-    public ControlPersistencia(File filePath) throws IOException {
+    public ControlPersistencia(String filePath) throws IOException {
         this.filePath = filePath;
-        file = new RandomAccessFile(filePath, "rw");
+        File archivo = new File(filePath);
+        File padre = archivo.getParentFile();
+        if (padre != null && !padre.exists()) {
+            boolean creada = padre.mkdirs();
+            if (!creada) {
+                throw new IOException("No se pudo crear la carpeta para persistencia: " + padre.getAbsolutePath());
+            }
+        }
+        this.file = new RandomAccessFile(filePath, "rw");
     }
 
     /**
      * Escribe un registro en el archivo al final, con campos de tamaño fijo.
-     * 
-     * @param clave la clave identificadora única de la partida
-     * @param nombreEquipo nombre del equipo participante
-     * @param jugadores array con nombres de 4 jugadores
-     * @param resultado resultado final ("Ganó" o "Perdió")
      */
     public void escribirRegistro(String clave, String nombreEquipo, String[] jugadores, String resultado) {
-        try (RandomAccessFile Rfile = new RandomAccessFile(filePath, "rw")) {
-            Rfile.seek(Rfile.length());  // Mover el puntero al final para appending
+        try {
+            file.seek(file.length());  // Mover el puntero al final para appending
             StringBuilder registro = new StringBuilder();
-            registro.append(padRight(clave, 10));
-            registro.append(padRight(nombreEquipo, 20));
+            registro.append(padRight(clave, 20));
+            registro.append(padRight(nombreEquipo, 30));
             for (String jugador : jugadores) {
-                registro.append(padRight(jugador, 20));
+                registro.append(padRight(jugador, 30));
             }
-            registro.append(padRight(resultado, 10));
+            registro.append(padRight(resultado, 20));
 
             byte[] data = registro.toString().getBytes(StandardCharsets.UTF_8);
 
@@ -94,6 +86,7 @@ public class ControlPersistencia {
 
             file.write(data);
         } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 
@@ -102,13 +95,13 @@ public class ControlPersistencia {
      * mostrando el contenido estructurado en forma legible.
      */
     public void leerRegistros() {
-        try (RandomAccessFile Rfile = new RandomAccessFile(filePath, "r")) {
-            long totalRegistros = Rfile.length() / RECORD_SIZE;
+        try (RandomAccessFile fileLectura = new RandomAccessFile(filePath, "r")) {
+            long totalRegistros = fileLectura.length() / RECORD_SIZE;
             System.out.println("Registros guardados en archivo:");
             for (int i = 0; i < totalRegistros; i++) {
-                Rfile.seek(i * RECORD_SIZE);
+                fileLectura.seek(i * RECORD_SIZE);
                 byte[] datos = new byte[RECORD_SIZE];
-                Rfile.readFully(datos);
+                fileLectura.readFully(datos);
                 String registro = new String(datos, StandardCharsets.UTF_8);
                 System.out.println(registro.trim());
             }
@@ -120,10 +113,6 @@ public class ControlPersistencia {
     /**
      * Rellena una cadena con espacios a la derecha para alcanzar longitud fija,
      * o la trunca si es demasiado larga.
-     * 
-     * @param texto cadena original
-     * @param longitud longitud fija deseada
-     * @return cadena formatada con longitud precisa
      */
     private String padRight(String texto, int longitud) {
         if (texto == null) texto = "";

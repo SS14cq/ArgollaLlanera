@@ -3,15 +3,6 @@ package Udistrital.avanzada.ArgollaLlanera.modelo;
 import java.io.Serializable;
 
 /**
- *
- * @author juan-
- * @version 1.0
- *
- * Clase Jugador que representa 1 jugador dentro de un equipo determinado Recibe
- * nombre, apodo, foto (generica)
- */
-
-/**
  * Clase Jugador que representa un jugador dentro de un equipo determinado.
  * Recibe nombre, apodo y foto (genérica).
  * @author juan-
@@ -31,7 +22,7 @@ public class Jugador implements Serializable {
      * Constructor que recibe los atributos para crear un objeto Jugador.
      * @param nombre Nombre del jugador.
      * @param apodo Apodo del jugador.
-     * @param foto Direccion de enlace de la foto del jugador
+     * @param foto Ruta o nombre de la imagen del jugador.
      */
     public Jugador(String nombre, String apodo, String foto) {
         this.nombre = nombre;
