@@ -1,0 +1,12 @@
+Udistrital\avanzada\ArgollaLlanera\control\ControladorJugadores.class
+Udistrital\avanzada\ArgollaLlanera\control\ControlEquipo.class
+Udistrital\avanzada\ArgollaLlanera\control\ControlJuego.class
+Udistrital\avanzada\ArgollaLlanera\modelo\Jugador.class
+Udistrital\avanzada\ArgollaLlanera\modelo\Juego.class
+Udistrital\avanzada\ArgollaLlanera\control\ControlAplicativo.class
+Udistrital\avanzada\ArgollaLlanera\control\ControlPersistencia.class
+Udistrital\avanzada\ArgollaLlanera\control\ControlVista.class
+Udistrital\avanzada\ArgollaLlanera\modelo\ConexionPropiedades.class
+Udistrital\avanzada\ArgollaLlanera\vista\VistaJuego.class
+Udistrital\avanzada\ArgollaLlanera\control\Launcher.class
+Udistrital\avanzada\ArgollaLlanera\modelo\Equipo.class
