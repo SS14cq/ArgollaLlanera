@@ -20,10 +20,18 @@ public class ControladorJugadores {
     }
 
     public void resetearPuntosJugador(Jugador jugador) {
-        jugador.setPuntos(0);
+        if (jugador != null) {
+            jugador.setPuntos(0);
+        }
     }
 
     public void añadirPuntosJugador(Jugador jugador, int puntos) {
-        jugador.agregarPuntosJugador(puntos);
+        if (jugador != null) {
+            jugador.setPuntos(jugador.getPuntos() + puntos);
+        }
+    }
+
+    public ArrayList<Jugador> getJugadores() {
+        return jugadores;
     }
 }

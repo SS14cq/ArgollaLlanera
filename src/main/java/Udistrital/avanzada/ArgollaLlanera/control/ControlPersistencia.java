@@ -69,12 +69,12 @@ public class ControlPersistencia {
         try (RandomAccessFile Rfile = new RandomAccessFile(filePath, "rw")) {
             Rfile.seek(Rfile.length());  // Mover el puntero al final para appending
             StringBuilder registro = new StringBuilder();
-            registro.append(padRight(clave, 20));
-            registro.append(padRight(nombreEquipo, 30));
+            registro.append(padRight(clave, 10));
+            registro.append(padRight(nombreEquipo, 20));
             for (String jugador : jugadores) {
-                registro.append(padRight(jugador, 30));
+                registro.append(padRight(jugador, 20));
             }
-            registro.append(padRight(resultado, 20));
+            registro.append(padRight(resultado, 10));
 
             byte[] data = registro.toString().getBytes(StandardCharsets.UTF_8);
 

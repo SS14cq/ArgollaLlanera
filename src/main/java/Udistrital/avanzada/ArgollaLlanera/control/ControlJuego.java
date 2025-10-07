@@ -135,7 +135,7 @@ public class ControlJuego {
             if (manosCompletadas.values().stream().allMatch(v -> v)) {
                 // Guarda resultados de la ronda para cada equipo
                 for (Equipo eq : equipos) {
-                    String res = (juego.getPuntajes().getOrDefault(eq, 0) >= 21) ? "Ganó" : "Perdió";
+                    String res = (juego.getPuntajes().getOrDefault(eq, 0) >= 21) ? "Gano" : "Perdio";
                     guardarResultado(eq, res);
                 }
 
@@ -149,7 +149,7 @@ public class ControlJuego {
                 boolean ambosSuperan21 = puntosA > 21 && puntosB > 21;
                 boolean ambosIguales21 = puntosA == 21 && puntosB == 21;
                 if (ambosSuperan21 || ambosIguales21) {
-                    controlVista.mostrarMensajeEnVista("Se jugará muerte súbita por empate o ambos superan 21 puntos.");
+                    controlVista.mostrarMensajeEnVista("\n ¡Se jugará muerte súbita por empate o ambos superan 21 puntos!");
                     jugarMuerteSubita();
                 } else if (puntosA >= 21 && puntosB < 21) {
                     finalizarJuegoConGanador(equipoA);
@@ -254,7 +254,7 @@ public class ControlJuego {
         rondasJugadas++;
 
         StringBuilder mensaje = new StringBuilder();
-        mensaje.append("¡Ganó el equipo ").append(ganador.getNombre()).append("!\nJugadores:\n");
+        mensaje.append("¡Gano el equipo ").append(ganador.getNombre()).append("!\nJugadores:\n");
         for (Jugador j : ganador.getJugadores()) {
             mensaje.append("- ").append(j.getNombre()).append(" (").append(j.getApodo()).append(")\n");
         }
