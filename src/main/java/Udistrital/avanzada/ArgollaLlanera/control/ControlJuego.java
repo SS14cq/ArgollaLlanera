@@ -177,20 +177,26 @@ public class ControlJuego {
 
         // Gestión de regla de los 21 puntos
         if (puntosActuales >= 21) {
-            if (equipoPrimerAlcance21 == null) {
-                equipoPrimerAlcance21 = equipoActual;
-                controlVista.mostrarMensaje("El equipo " + equipoActual.getNombre()
-                        + " alcanzó 21 puntos. El otro equipo debe completar su turno para igualar.");
-                cambiarTurno();
-                return;
+           if (equipoPrimerAlcance21 == null) {
+            equipoPrimerAlcance21 = equipoActual;
+            controlVista.mostrarMensaje("El equipo " + equipoActual.getNombre()
+                + " alcanzó 21 puntos. El otro equipo debe completar su turno para intentar igualar.");
+            cambiarTurno();
+            return;
             } else {
-                if (equipoActual.equals(equipoPrimerAlcance21)) {
-                    cambiarTurno(); // Esperar que el otro termine
-                    return;
-                } else {
-                    evaluarGanador();
-                    return;
-                }
+        // Si el segundo equipo termina su turno y no iguala, el primero gana
+            int puntosPrimerEquipo = juego.getPuntajes().getOrDefault(equipoPrimerAlcance21, 0);
+            int puntosSegundoEquipo = juego.getPuntajes().getOrDefault(equipoActual, 0);
+
+            if (puntosSegundoEquipo < 21 && puntosPrimerEquipo >= 21) {
+            controlVista.mostrarGanador(equipoPrimerAlcance21);
+            finalizarJuegoConGanador(equipoPrimerAlcance21);
+            return;
+            }
+
+        // Si ambos tienen 21 o más, evaluar empate o muerte súbita
+        evaluarGanador();
+        return;
             }
         }
 
@@ -423,3 +429,4 @@ public class ControlJuego {
         System.exit(0);
     }
 }
+
