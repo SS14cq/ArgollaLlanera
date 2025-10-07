@@ -1,0 +1,29 @@
+Prueba de la clase ControladorJugadores que busca verificar que esta clase modifique la lista de los jugadores con los metodos crearJugador(), resetearPuntosJugador y añadirPuntosJugador().
+
+Prueba al metodo crearJugador de la clase ControladorJugador esta prueba verifica que el jugador se cree correctamente y se agregue a la lista interna de jugadores
+
+Crea el jugador de ejemplo
+System.out.println("crearJugador");
+
+se instancia al jugador con los parametros nombre apodo y edad
+instance.crearJugador(nombre, apodo, foto);
+
+Pureba del metodo resetearPuntosJugador() de la clase  ControlJugadores Con esta prueba se verifica que luego de iniciar la segunda ronda los puntos de los jugadores se reseteen.
+
+Se escoge al jugador para la prueba
+ Jugador jugador = new Jugador("Marcos", "Alacran", "foto.jpg");
+ Se inicializa los puntos del jugador en 100
+        jugador.setPuntos(100);
+Verificar que los puntos se hayan reseteado
+        assertEquals(0, jugador.getPuntos(), "Los puntos del jugador deben ser 0 después de resetear");
+
+     Prueba del metodo añadirPuntosJugador() de la clase ControlJugadores
+     Con esta prueba se verifica que el metodo añada los puntos a cada jugador 
+Se elige al jugador de prueba
+        Jugador jugador = new Jugador("Mercedes", "Florentina", "foto.jpg");
+  se suman 21 puntos al jugador
+        int puntos = 21;
+imprime el puntaje total del jugador instanciado
+        assertEquals(71, jugador.getPuntos(), "Los puntos del jugador deben ser 71 después de añadir 20");
+     
+    
